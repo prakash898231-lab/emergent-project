@@ -1,0 +1,190 @@
+{
+  "identity": {
+    "name": "LocalMart",
+    "description": "A minimalist, hyperlocal e-commerce platform connecting local sellers with neighbors.",
+    "tone": "Trustworthy, Efficient, Fresh, Community-Focused",
+    "archetype": "Swiss Utility x Organic Warmth",
+    "theme_mode": "light"
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Manrope, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-4xl md:text-6xl font-bold tracking-tight",
+      "h2": "text-3xl md:text-5xl font-semibold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-semibold",
+      "h4": "text-xl md:text-2xl font-medium",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-relaxed",
+      "body_sm": "text-sm leading-normal",
+      "caption": "text-xs tracking-wide uppercase text-slate-500"
+    }
+  },
+  "colors": {
+    "primary": {
+      "DEFAULT": "#10B981",
+      "foreground": "#FFFFFF",
+      "hover": "#059669",
+      "active": "#047857"
+    },
+    "secondary": {
+      "DEFAULT": "#0F172A",
+      "foreground": "#FFFFFF",
+      "hover": "#1E293B"
+    },
+    "background": {
+      "DEFAULT": "#FFFFFF",
+      "secondary": "#F8FAFC",
+      "tertiary": "#F1F5F9"
+    },
+    "surface": {
+      "card": "#FFFFFF",
+      "popover": "#FFFFFF",
+      "modal": "#FFFFFF"
+    },
+    "border": {
+      "DEFAULT": "#E2E8F0",
+      "focus": "#10B981"
+    },
+    "text": {
+      "primary": "#0F172A",
+      "secondary": "#64748B",
+      "muted": "#94A3B8",
+      "inverse": "#FFFFFF"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444",
+      "info": "#3B82F6"
+    }
+  },
+  "visual_enhancers": {
+    "radius": {
+      "default": "rounded-lg",
+      "button": "rounded-full",
+      "card": "rounded-xl",
+      "input": "rounded-md"
+    },
+    "shadows": {
+      "card": "shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+      "card_hover": "shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
+      "dropdown": "shadow-xl border border-slate-100",
+      "button": "shadow-sm"
+    },
+    "borders": {
+      "card": "border border-slate-100",
+      "divider": "border-slate-100"
+    },
+    "glass": {
+      "header": "bg-white/80 backdrop-blur-md border-b border-slate-100",
+      "overlay": "bg-black/20 backdrop-blur-sm"
+    }
+  },
+  "layout_system": {
+    "spacing_scale": "Recommended: p-4, p-6, p-8, p-12, p-16 (Generous spacing)",
+    "container": "container mx-auto px-4 md:px-6 max-w-7xl",
+    "grids": {
+      "landing_hero": "grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-8",
+      "product_grid": "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10",
+      "dashboard_dense": "grid grid-cols-1 md:grid-cols-4 gap-6",
+      "form_layout": "grid grid-cols-1 gap-6 max-w-md mx-auto"
+    }
+  },
+  "components": {
+    "Button": {
+      "base": "inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-white",
+      "variants": {
+        "default": "bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4",
+        "outline": "border border-input hover:bg-slate-50 hover:text-slate-900 h-10 py-2 px-4",
+        "ghost": "hover:bg-slate-100 hover:text-slate-900 h-10 py-2 px-4",
+        "link": "underline-offset-4 hover:underline text-primary h-auto p-0"
+      }
+    },
+    "Card": {
+      "base": "rounded-xl border border-slate-200 bg-white text-slate-950 shadow-sm transition-all duration-200 hover:shadow-md",
+      "header": "flex flex-col space-y-1.5 p-6",
+      "content": "p-6 pt-0",
+      "footer": "flex items-center p-6 pt-0"
+    },
+    "Input": {
+      "base": "flex h-12 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+    },
+    "Badge": {
+      "base": "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+      "variants": {
+        "default": "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        "secondary": "border-transparent bg-slate-100 text-slate-900 hover:bg-slate-200",
+        "outline": "text-slate-950 border-slate-200"
+      }
+    }
+  },
+  "image_assets": {
+    "hero_banner": {
+      "url": "https://images.pexels.com/photos/6591159/pexels-photo-6591159.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Fresh grocery delivery in paper bag",
+      "position": "Landing Page Hero"
+    },
+    "category_electronics": {
+      "url": "https://images.pexels.com/photos/14486283/pexels-photo-14486283.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Minimalist electronics on desk",
+      "position": "Category Section"
+    },
+    "category_fresh": {
+      "url": "https://images.pexels.com/photos/8900017/pexels-photo-8900017.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "alt": "Senior man with fresh vegetables",
+      "position": "Category Section"
+    }
+  },
+  "motion": {
+    "libraries": ["framer-motion"],
+    "preferences": {
+      "reduced_motion": "respect-user-settings",
+      "default_transition": "all 0.2s ease-in-out"
+    },
+    "animations": {
+      "fadeIn": {
+        "initial": { "opacity": 0, "y": 10 },
+        "animate": { "opacity": 1, "y": 0 },
+        "exit": { "opacity": 0, "y": -10 },
+        "transition": { "duration": 0.3 }
+      },
+      "staggerContainer": {
+        "animate": { "transition": { "staggerChildren": 0.1 } }
+      },
+      "hoverScale": {
+        "whileHover": { "scale": 1.02 },
+        "whileTap": { "scale": 0.98 }
+      }
+    }
+  },
+  "accessibility": {
+    "contrast_ratio": "AA (4.5:1) minimum for normal text",
+    "focus_states": "Visible 2px ring offset-2 on all interactive elements",
+    "aria_labels": "Mandatory for icon-only buttons",
+    "touch_targets": "Minimum 44x44px for mobile interactions"
+  },
+  "instructions_to_main_agent": [
+    "Use 'lucide-react' for all icons.",
+    "Use 'sonner' for toast notifications.",
+    "Implement 'framer-motion' for smooth page transitions and micro-interactions.",
+    "Prioritize mobile responsiveness. The layout must stack perfectly on mobile.",
+    "For the 'Seller Dashboard', use a dense table layout for inventory management.",
+    "For the 'Customer Shop', use large product cards with clear 'Add to Cart' buttons.",
+    "Authentication pages should be clean, centered cards with social login placeholders if needed (but prioritize Email/Password).",
+    "Do NOT use gradients for backgrounds. Stick to solid white or very light slate (#F8FAFC).",
+    "Use the provided image URLs for the landing page and dummy product data.",
+    "Ensure all interactive elements have data-testid attributes."
+  ],
+  "UNIVERSAL_GUIDELINES": [
+    "Don't make generic centered layouts. Use asymmetry.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12px blur) for sticky headers.",
+    "Every interaction needs micro-animations - hover states, transitions.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "NEVER use AI assistant Emoji characters like 🤖🧠 in the UI."
+  ]
+}
