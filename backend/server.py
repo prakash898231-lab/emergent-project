@@ -1,4 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, File, UploadFile
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -12,15 +14,45 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 from passlib.context import CryptContext
+import cloudinary
+import cloudinary.uploader
+
+# Configure Logging Early
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
 
-app = FastAPI()
+mongo_url = os.environ.get('MONGO_URL')
+db_name = os.environ.get('DB_NAME', 'localmart')
+
+if not mongo_url:
+    logging.error("MONGO_URL not found in environment variables. Please check your .env file.")
+    # Default to local if not provided, but log a warning
+    mongo_url = "mongodb://localhost:27017"
+
+client = AsyncIOMotorClient(mongo_url)
+yedb = client[db_name]
+db = yedb
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    client.close()
+
+app = FastAPI(lifespan=lifespan)
+
 api_router = APIRouter(prefix="/api")
 
 security = HTTPBearer()
@@ -63,6 +95,8 @@ class UserRegister(BaseModel):
     password: str
     name: str
     role: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -75,6 +109,8 @@ class UserResponse(BaseModel):
     name: str
     role: str
     created_at: str
+    phone: Optional[str] = None
+    address: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -87,6 +123,7 @@ class ProductCreate(BaseModel):
     category: str
     stock: int
     image_url: Optional[str] = None
+    shop_id: Optional[str] = None
 
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
@@ -106,7 +143,35 @@ class Product(BaseModel):
     stock: int
     image_url: Optional[str] = None
     seller_id: str
+    shop_id: Optional[str] = None
     created_at: str
+
+
+class ShopCreate(BaseModel):
+    name: str
+    address: str
+    phone: str
+    image_url: Optional[str] = None
+
+
+class Shop(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str
+    seller_id: str
+    name: str
+    image_url: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    created_at: str
+    seller_name: Optional[str] = None
+    product_count: Optional[int] = None
+
+
+class ShopUpdate(BaseModel):
+    name: Optional[str] = None
+    image_url: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
 
 class CartItemCreate(BaseModel):
     product_id: str
@@ -161,6 +226,11 @@ async def register(user_data: UserRegister):
         "role": user_data.role,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    # include optional contact info
+    if user_data.phone:
+        user_doc["phone"] = user_data.phone
+    if user_data.address:
+        user_doc["address"] = user_data.address
     await db.users.insert_one(user_doc)
     
     token = create_access_token({"sub": user_id})
@@ -169,7 +239,9 @@ async def register(user_data: UserRegister):
         email=user_data.email,
         name=user_data.name,
         role=user_data.role,
-        created_at=user_doc["created_at"]
+        created_at=user_doc["created_at"],
+        phone=user_data.phone,
+        address=user_data.address
     )
     return TokenResponse(access_token=token, user=user_response)
 
@@ -185,13 +257,35 @@ async def login(credentials: UserLogin):
         email=user["email"],
         name=user["name"],
         role=user["role"],
-        created_at=user["created_at"]
+        created_at=user["created_at"],
+        phone=user.get("phone"),
+        address=user.get("address")
     )
     return TokenResponse(access_token=token, user=user_response)
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     return UserResponse(**current_user)
+
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    password: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+
+
+@api_router.put("/auth/me", response_model=UserResponse)
+async def update_me(user_update: UserUpdate, current_user: dict = Depends(get_current_user)):
+    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    if "password" in update_data:
+        # hash new password
+        update_data["password"] = hash_password(update_data.pop("password"))
+    if update_data:
+        await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})
+    # fetch fresh user
+    user = await db.users.find_one({"id": current_user["id"]}, {"_id": 0})
+    return UserResponse(**user)
 
 @api_router.get("/products", response_model=List[Product])
 async def get_products(category: Optional[str] = None):
@@ -332,17 +426,123 @@ async def get_orders(current_user: dict = Depends(get_current_user)):
 async def create_product(product_data: ProductCreate, current_user: dict = Depends(get_current_user)):
     if current_user["role"] != "seller":
         raise HTTPException(status_code=403, detail="Only sellers can create products")
-    
+    # Require shop_id and verify ownership
+    shop_id = product_data.shop_id
+    if not shop_id:
+        raise HTTPException(status_code=400, detail="shop_id is required when creating a product")
+
+    shop = await db.shops.find_one({"id": shop_id, "seller_id": current_user["id"]}, {"_id": 0})
+    if not shop:
+        raise HTTPException(status_code=404, detail="Shop not found or not owned by seller")
+
     product_id = str(uuid.uuid4())
     product_doc = {
         "id": product_id,
         "seller_id": current_user["id"],
+        "shop_id": shop_id,
         "created_at": datetime.now(timezone.utc).isoformat(),
         **product_data.model_dump()
     }
-    
+
     await db.products.insert_one(product_doc)
     return Product(**product_doc)
+
+
+@api_router.post("/seller/products/upload", response_model=dict)
+async def upload_product_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can upload images")
+    try:
+        contents = await file.read()
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            resource_type="auto",
+            folder="localmart/products",
+            public_id=f"product_{uuid.uuid4()}"
+        )
+        return {"url": upload_result["secure_url"]}
+    except Exception as e:
+        logging.error(f"Product image upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@api_router.post("/seller/shops/upload", response_model=dict)
+async def upload_shop_image(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can upload shop images")
+    try:
+        contents = await file.read()
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            resource_type="auto",
+            folder="localmart/shops",
+            public_id=f"shop_{uuid.uuid4()}"
+        )
+        return {"url": upload_result["secure_url"]}
+    except Exception as e:
+        logging.error(f"Shop image upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@api_router.post("/seller/shops", response_model=Shop)
+async def create_shop(shop_data: ShopCreate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can create shops")
+
+    shop_id = str(uuid.uuid4())
+    shop_doc = {
+        "id": shop_id,
+        "seller_id": current_user["id"],
+        "name": shop_data.name,
+        "address": shop_data.address,
+        "phone": shop_data.phone,
+        "image_url": shop_data.image_url,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.shops.insert_one(shop_doc)
+    return Shop(**shop_doc)
+
+
+@api_router.get("/seller/shops", response_model=List[Shop])
+async def get_seller_shops(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can access this")
+
+    shops = await db.shops.find({"seller_id": current_user["id"]}, {"_id": 0}).to_list(1000)
+    return shops
+
+
+@api_router.put("/seller/shops/{shop_id}", response_model=Shop)
+async def update_shop(shop_id: str, shop_update: ShopUpdate, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can update shops")
+
+    shop = await db.shops.find_one({"id": shop_id, "seller_id": current_user["id"]}, {"_id": 0})
+    if not shop:
+        raise HTTPException(status_code=404, detail="Shop not found")
+
+    update_data = {k: v for k, v in shop_update.model_dump().items() if v is not None}
+    if update_data:
+        await db.shops.update_one({"id": shop_id}, {"$set": update_data})
+        shop.update(update_data)
+
+    return Shop(**shop)
+
+
+@api_router.delete("/seller/shops/{shop_id}")
+async def delete_shop(shop_id: str, current_user: dict = Depends(get_current_user)):
+    if current_user["role"] != "seller":
+        raise HTTPException(status_code=403, detail="Only sellers can delete shops")
+
+    result = await db.shops.delete_one({"id": shop_id, "seller_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Shop not found")
+
+    # Also optionally delete or unset shop_id on products
+    await db.products.update_many({"shop_id": shop_id}, {"$unset": {"shop_id": ""}})
+
+    return {"message": "Shop deleted"}
 
 @api_router.get("/seller/products", response_model=List[Product])
 async def get_seller_products(current_user: dict = Depends(get_current_user)):
@@ -351,6 +551,45 @@ async def get_seller_products(current_user: dict = Depends(get_current_user)):
     
     products = await db.products.find({"seller_id": current_user["id"]}, {"_id": 0}).to_list(1000)
     return products
+
+
+# Public shops endpoints
+@api_router.get("/shops", response_model=List[Shop])
+async def get_public_shops():
+    shops = await db.shops.find({}, {"_id": 0}).to_list(1000)
+    results = []
+    for shop in shops:
+        seller = await db.users.find_one({"id": shop["seller_id"]}, {"_id": 0})
+        shop["seller_name"] = seller["name"] if seller else None
+        shop["product_count"] = await db.products.count_documents({"shop_id": shop["id"]})
+        results.append(Shop(**shop))
+    return results
+
+
+@api_router.get("/shops/{shop_id}", response_model=Shop)
+async def get_shop(shop_id: str):
+    shop = await db.shops.find_one({"id": shop_id}, {"_id": 0})
+    if not shop:
+        raise HTTPException(status_code=404, detail="Shop not found")
+    seller = await db.users.find_one({"id": shop["seller_id"]}, {"_id": 0})
+    shop["seller_name"] = seller["name"] if seller else None
+    shop["product_count"] = await db.products.count_documents({"shop_id": shop_id})
+    return Shop(**shop)
+
+
+@api_router.get("/shops/{shop_id}/products", response_model=List[Product])
+async def get_products_by_shop(shop_id: str, category: Optional[str] = None):
+    query = {"shop_id": shop_id}
+    if category:
+        query["category"] = category
+    products = await db.products.find(query, {"_id": 0}).to_list(1000)
+    return products
+
+
+@api_router.get("/shops/{shop_id}/categories", response_model=List[str])
+async def get_shop_categories(shop_id: str):
+    categories = await db.products.distinct("category", {"shop_id": shop_id})
+    return categories
 
 @api_router.put("/seller/products/{product_id}", response_model=Product)
 async def update_product(product_id: str, product_data: ProductUpdate, current_user: dict = Depends(get_current_user)):
@@ -419,12 +658,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

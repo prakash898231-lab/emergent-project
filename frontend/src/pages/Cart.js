@@ -75,7 +75,7 @@ export const Cart = () => {
                     />
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold text-slate-900" data-testid="cart-item-name">{item.product.name}</h3>
-                      <p className="text-slate-600 text-sm mb-2" data-testid="cart-item-price">${item.product.price.toFixed(2)}</p>
+                      <p className="text-slate-600 text-sm mb-2" data-testid="cart-item-price">₹{item.product.price.toFixed(2)}</p>
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center border border-slate-200 rounded-lg">
                           <Button
@@ -110,7 +110,7 @@ export const Cart = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-semibold text-slate-900" data-testid="cart-item-total">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₹{(item.product.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   </div>
@@ -125,7 +125,7 @@ export const Cart = () => {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-slate-600">
                   <span>Subtotal</span>
-                  <span data-testid="subtotal">${total.toFixed(2)}</span>
+                  <span data-testid="subtotal">₹{total.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>Delivery</span>
@@ -133,7 +133,7 @@ export const Cart = () => {
                 </div>
                 <div className="border-t border-slate-200 pt-3 flex justify-between text-lg font-semibold text-slate-900">
                   <span>Total</span>
-                  <span data-testid="total">${total.toFixed(2)}</span>
+                  <span data-testid="total">₹{total.toFixed(2)}</span>
                 </div>
               </div>
               <Button

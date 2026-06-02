@@ -48,7 +48,7 @@ export const ProductCard = ({ product }) => {
         <h3 className="text-lg font-semibold text-slate-900 mb-1" data-testid="product-name">{product.name}</h3>
         <p className="text-sm text-slate-600 mb-3 line-clamp-2" data-testid="product-description">{product.description}</p>
         <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold text-primary" data-testid="product-price">${product.price.toFixed(2)}</span>
+          <span className="text-2xl font-bold text-primary" data-testid="product-price">₹{product.price.toFixed(2)}</span>
           {product.stock > 0 ? (
             <Button
               size="sm"

@@ -8,8 +8,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
 import { Package } from 'lucide-react';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 export const Checkout = () => {
   const { cart, fetchCart } = useCart();
@@ -113,14 +112,14 @@ export const Checkout = () => {
                         {item.product.name} × {item.quantity}
                       </span>
                       <span className="text-slate-900 font-medium">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        ₹{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   )
                 ))}
                 <div className="border-t border-slate-200 pt-3 flex justify-between text-lg font-semibold text-slate-900">
                   <span>Total</span>
-                  <span data-testid="order-total">${total.toFixed(2)}</span>
+                  <span data-testid="order-total">₹{total.toFixed(2)}</span>
                 </div>
               </div>
               <Button

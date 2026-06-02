@@ -7,8 +7,7 @@ import { Button } from '../components/ui/button';
 import { ShoppingCart, Package, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 export const ProductDetail = () => {
   const { id } = useParams();
@@ -98,7 +97,7 @@ export const ProductDetail = () => {
             </p>
 
             <div className="mb-6">
-              <span className="text-4xl font-bold text-primary" data-testid="product-price">${product.price.toFixed(2)}</span>
+              <span className="text-4xl font-bold text-primary" data-testid="product-price">₹{product.price.toFixed(2)}</span>
             </div>
 
             <div className="mb-6">

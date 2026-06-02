@@ -47,6 +47,12 @@ export const Header = () => {
                     </Link>
                   </>
                 )}
+                {/* common profile link for all logged-in users */}
+                {user && (
+                  <Link to="/profile" data-testid="profile-link">
+                    <Button variant="ghost" size="sm">Profile</Button>
+                  </Link>
+                )}
                 {user.role === 'seller' && (
                   <>
                     <Link to="/seller/dashboard" data-testid="seller-dashboard-link">

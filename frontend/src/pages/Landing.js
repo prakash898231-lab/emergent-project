@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { ProductCard } from '../components/ProductCard';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Search, Package } from 'lucide-react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 export const Landing = () => {
   const [products, setProducts] = useState([]);
@@ -14,12 +14,27 @@ export const Landing = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [shops, setShops] = useState([]);
+  const [shopsLoading, setShopsLoading] = useState(true);
 
-  const categories = ['all', 'Electronics', 'Fashion', 'Home', 'Groceries', 'Books'];
+  const categories = ['all', 'Electronics', 'Fashion', 'Home', 'Groceries', 'Books', 'Other'];
 
   useEffect(() => {
     fetchProducts();
+    fetchShops();
   }, []);
+
+  const fetchShops = async () => {
+    try {
+      setShopsLoading(true);
+      const res = await axios.get(`${API}/shops`);
+      setShops(res.data || []);
+    } catch (err) {
+      console.error('Error fetching shops', err);
+    } finally {
+      setShopsLoading(false);
+    }
+  };
 
   useEffect(() => {
     let filtered = products;
@@ -80,6 +95,14 @@ export const Landing = () => {
                   />
                 </div>
               </div>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a href="#products">
+                  <Button className="rounded-full">Browse Products</Button>
+                </a>
+                <Link to="/shops">
+                  <Button variant="outline" className="rounded-full">Browse Shops</Button>
+                </Link>
+              </div>
             </motion.div>
             <motion.div
               className="md:col-span-5"
@@ -94,6 +117,26 @@ export const Landing = () => {
               />
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      <section className="py-8 bg-white" data-testid="shops-section">
+        <div className="container mx-auto px-4 md:px-6 max-w-7xl">
+          <h2 className="text-2xl font-semibold mb-4">Local Shops</h2>
+          {shopsLoading ? (
+            <div className="py-6">Loading shops...</div>
+          ) : shops.length > 0 ? (
+            <div className="flex space-x-4 overflow-x-auto pb-4">
+              {shops.map((shop) => (
+                <Link key={shop.id} to={`/shops/${shop.id}`} className="w-56 flex-shrink-0 bg-white rounded-lg p-4 border hover:shadow">
+                  <img src={shop.image_url || 'https://via.placeholder.com/300x200'} alt={shop.name} className="w-full h-32 object-cover rounded mb-2" />
+                  <h3 className="text-lg font-semibold">{shop.name}</h3>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-600">No shops available yet</p>
+          )}
         </div>
       </section>
 

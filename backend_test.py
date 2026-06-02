@@ -7,11 +7,13 @@ Tests all backend endpoints for customer and seller functionality
 import requests
 import json
 import sys
+import os
 from datetime import datetime
 
 class EcommerceAPITester:
-    def __init__(self, base_url="https://local-ecommerce-4.preview.emergentagent.com/api"):
-        self.base_url = base_url
+    def __init__(self, base_url=None):
+        port = os.environ.get("PORT", "8001")
+        self.base_url = base_url or f"http://localhost:{port}/api"
         self.customer_token = None
         self.seller_token = None
         self.test_product_id = None
@@ -23,12 +25,14 @@ class EcommerceAPITester:
         timestamp = datetime.now().strftime("%H:%M:%S")
         print(f"[{timestamp}] {status}: {message}")
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, token=None, params=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, token=None, params=None, files=None):
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
-        headers = {'Content-Type': 'application/json'}
+        headers = {}
         if token:
             headers['Authorization'] = f'Bearer {token}'
+        if data is not None and files is None:
+            headers['Content-Type'] = 'application/json'
 
         self.tests_run += 1
         self.log(f"Testing {name} - {method} {endpoint}")
@@ -37,7 +41,10 @@ class EcommerceAPITester:
             if method == 'GET':
                 response = requests.get(url, headers=headers, params=params, timeout=10)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=headers, timeout=10)
+                if files:
+                    response = requests.post(url, headers=headers, files=files, data=data, timeout=10)
+                else:
+                    response = requests.post(url, json=data, headers=headers, timeout=10)
             elif method == 'PUT':
                 response = requests.put(url, json=data, headers=headers, timeout=10)
             elif method == 'DELETE':
@@ -71,7 +78,9 @@ class EcommerceAPITester:
             "email": test_email,
             "password": "password123",
             "name": "Test Customer",
-            "role": "customer"
+            "role": "customer",
+            "phone": "000-000-0000",
+            "address": "123 Customer Lane"
         }
         success, response = self.run_test("Customer Registration", "POST", "auth/register", 200, data)
         if success and 'access_token' in response:
@@ -87,7 +96,9 @@ class EcommerceAPITester:
             "email": test_email,
             "password": "password123",
             "name": "Test Seller",
-            "role": "seller"
+            "role": "seller",
+            "phone": "999-999-9999",
+            "address": "456 Seller Street"
         }
         success, response = self.run_test("Seller Registration", "POST", "auth/register", 200, data)
         if success and 'access_token' in response:
@@ -96,9 +107,33 @@ class EcommerceAPITester:
             return True
         return False
 
+    def test_image_upload(self):
+        """Test image upload for seller"""
+        if not self.seller_token:
+            return False
+        files = {"file": ("test.png", b"\x89PNG\r\n", "image/png")}
+        success, response = self.run_test("Upload Image", "POST", "seller/products/upload", 200, data=None, token=self.seller_token, files=files)
+        if success and 'url' in response:
+            self.log(f"Image uploaded: {response['url']}", "SUCCESS")
+            return True
+        return False
+
     def test_auth_me_customer(self):
         """Test getting current customer user info"""
         return self.run_test("Get Customer Info", "GET", "auth/me", 200, token=self.customer_token)[0]
+
+    def test_customer_update_profile(self):
+        """Test updating customer profile details"""
+        data = {
+            "name": "Updated Customer",
+            "phone": "555-1234",
+            "address": "123 Main St"
+        }
+        success, resp = self.run_test("Update Customer Profile", "PUT", "auth/me", 200, data, self.customer_token)
+        if success and resp.get("name") == data["name"]:
+            self.log("Customer profile updated successfully", "SUCCESS")
+            return True
+        return False
 
     def test_auth_me_seller(self):
         """Test getting current seller user info"""
@@ -241,6 +276,7 @@ class EcommerceAPITester:
             # Authentication
             self.test_customer_register,
             self.test_seller_register,
+            self.test_image_upload,
             self.test_auth_me_customer,
             self.test_auth_me_seller,
             

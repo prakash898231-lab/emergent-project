@@ -14,6 +14,8 @@ export const Auth = () => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('customer');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
@@ -22,25 +24,22 @@ export const Auth = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      let user;
       if (isLogin) {
-        const user = await login(email, password);
+        user = await login(email, password);
         toast.success('Login successful!');
-        if (user.role === 'customer') {
-          navigate('/');
-        } else {
-          navigate('/seller/dashboard');
-        }
       } else {
-        const user = await register(email, password, name, role);
+        user = await register(email, password, name, role, phone, address);
         toast.success('Registration successful!');
-        if (user.role === 'customer') {
-          navigate('/');
-        } else {
-          navigate('/seller/dashboard');
-        }
+      }
+
+      if (user?.role === 'seller') {
+        navigate('/seller/dashboard');
+      } else {
+        navigate('/');
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Authentication failed');
+      toast.error(error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }
@@ -69,18 +68,40 @@ export const Auth = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {!isLogin && (
-              <div>
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="John Doe"
-                  data-testid="name-input"
-                />
-              </div>
+              <>
+                <div>
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input
+                    id="name"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="John Doe"
+                    data-testid="name-input"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input
+                    id="phone"
+                    type="text"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(123) 456-7890"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="123 Main St"
+                  />
+                </div>
+              </>
             )}
 
             <div>

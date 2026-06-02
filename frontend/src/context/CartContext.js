@@ -1,12 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
+import { API } from '../lib/api';
 
 const CartContext = createContext();
 
 export const useCart = () => useContext(CartContext);
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const CartProvider = ({ children }) => {
   const { token, user } = useAuth();

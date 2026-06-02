@@ -3,8 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Package, Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 export const Orders = () => {
   const { token } = useAuth();
@@ -86,7 +85,7 @@ export const Orders = () => {
                   {order.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between text-sm" data-testid="order-item">
                       <span className="text-slate-600">{item.product_name} × {item.quantity}</span>
-                      <span className="text-slate-900 font-medium">${(item.price * item.quantity).toFixed(2)}</span>
+                      <span className="text-slate-900 font-medium">₹{(item.price * item.quantity).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -106,7 +105,7 @@ export const Orders = () => {
                   </div>
                   <div className="flex justify-between font-semibold text-lg">
                     <span>Total:</span>
-                    <span className="text-primary" data-testid="order-total">${order.total_amount.toFixed(2)}</span>
+                    <span className="text-primary" data-testid="order-total">₹{order.total_amount.toFixed(2)}</span>
                   </div>
                 </div>
               </motion.div>

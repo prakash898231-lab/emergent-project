@@ -8,12 +8,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import { API } from '../lib/api';
 
 export const SellerProducts = () => {
   const { token } = useAuth();
   const [products, setProducts] = useState([]);
+  const [shops, setShops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -23,12 +23,24 @@ export const SellerProducts = () => {
     price: '',
     category: 'Electronics',
     stock: '',
-    image_url: ''
+    image_url: '',
+    shop_id: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   useEffect(() => {
     fetchProducts();
+    fetchShops();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const fetchProducts = async () => {
     try {
@@ -41,6 +53,15 @@ export const SellerProducts = () => {
       console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchShops = async () => {
+    try {
+      const res = await axios.get(`${API}/seller/shops`, { headers: { Authorization: `Bearer ${token}` } });
+      setShops(res.data);
+    } catch (err) {
+      console.error('Error fetching shops', err);
     }
   };
 
@@ -64,7 +85,7 @@ export const SellerProducts = () => {
       }
       setIsDialogOpen(false);
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: '', category: 'Electronics', stock: '', image_url: '' });
+      setFormData({ name: '', description: '', price: '', category: 'Electronics', stock: '', image_url: '', shop_id: '' });
       fetchProducts();
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to save product');
@@ -79,9 +100,46 @@ export const SellerProducts = () => {
       price: product.price.toString(),
       category: product.category,
       stock: product.stock.toString(),
-      image_url: product.image_url || ''
+      image_url: product.image_url || '',
+      shop_id: product.shop_id || ''
     });
     setIsDialogOpen(true);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    // client-side validation
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be 5MB or smaller');
+      return;
+    }
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    const localPreview = URL.createObjectURL(file);
+    setPreviewUrl(localPreview);
+    try {
+      setUploadingImage(true);
+      const data = new FormData();
+      data.append('file', file);
+      const res = await axios.post(`${API}/seller/products/upload`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setFormData({ ...formData, image_url: res.data.url });
+      setPreviewUrl('');
+      toast.success('Image uploaded');
+    } catch (err) {
+      console.error('Upload error', err);
+      const msg = err?.response?.data?.detail || err.message || 'Image upload failed';
+      toast.error(`Image upload failed: ${msg}`);
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleDelete = async (productId) => {
@@ -115,7 +173,7 @@ export const SellerProducts = () => {
             setIsDialogOpen(open);
             if (!open) {
               setEditingProduct(null);
-              setFormData({ name: '', description: '', price: '', category: 'Electronics', stock: '', image_url: '' });
+              setFormData({ name: '', description: '', price: '', category: 'Electronics', stock: '', image_url: '', shop_id: '' });
             }
           }}>
             <DialogTrigger asChild>
@@ -140,6 +198,22 @@ export const SellerProducts = () => {
                   />
                 </div>
                 <div>
+                  <Label htmlFor="shop">Shop</Label>
+                  <select
+                    id="shop"
+                    value={formData.shop_id}
+                    onChange={(e) => setFormData({ ...formData, shop_id: e.target.value })}
+                    required
+                    className="flex h-12 w-full rounded-md border border-slate-200 bg-transparent px-3 py-1 text-sm"
+                    data-testid="product-shop-select"
+                  >
+                    <option value="">Select a shop</option>
+                    {shops.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <Label htmlFor="description">Description</Label>
                   <Input
                     id="description"
@@ -151,7 +225,7 @@ export const SellerProducts = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="price">Price ($)</Label>
+                    <Label htmlFor="price">Price (₹)</Label>
                     <Input
                       id="price"
                       type="number"
@@ -188,17 +262,41 @@ export const SellerProducts = () => {
                     <option value="Home">Home</option>
                     <option value="Groceries">Groceries</option>
                     <option value="Books">Books</option>
+                    <option value="Beauty">Beauty</option>
+                    <option value="Sports">Sports</option>
+                    <option value="Toys">Toys</option>
+                    <option value="Health">Health</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="image_url">Image URL (optional)</Label>
-                  <Input
-                    id="image_url"
-                    value={formData.image_url}
-                    onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                    placeholder="https://example.com/image.jpg"
-                    data-testid="product-image-input"
-                  />
+                  <Label>Product Image</Label>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="text"
+                      id="image_url"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      data-testid="product-image-input"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      data-testid="product-image-file"
+                    />
+                  </div>
+                  {uploadingImage && <span className="text-sm text-slate-500">Uploading...</span>}
+                  {(previewUrl || formData.image_url) && (
+                    <div className="mt-2 h-24 w-24 overflow-hidden rounded-lg bg-slate-100">
+                      <img
+                        src={previewUrl || formData.image_url}
+                        alt="preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
                 <Button type="submit" className="w-full rounded-full" data-testid="submit-product-button">
                   {editingProduct ? 'Update Product' : 'Create Product'}
@@ -225,16 +323,20 @@ export const SellerProducts = () => {
                 transition={{ delay: index * 0.1 }}
                 data-testid="product-item"
               >
-                <img
-                  src={product.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=350&w=350'}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                />
+                <div className="w-full overflow-hidden bg-white">
+                  <div className="aspect-square w-full overflow-hidden bg-slate-100">
+                    <img
+                      src={product.image_url || 'https://images.pexels.com/photos/264636/pexels-photo-264636.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=350&w=350'}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
                 <div className="p-4">
                   <h3 className="text-lg font-semibold text-slate-900 mb-1">{product.name}</h3>
                   <p className="text-sm text-slate-600 mb-3 line-clamp-2">{product.description}</p>
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xl font-bold text-primary">${product.price.toFixed(2)}</span>
+                    <span className="text-xl font-bold text-primary">₹{product.price.toFixed(2)}</span>
                     <span className="text-sm text-slate-600">Stock: {product.stock}</span>
                   </div>
                   <div className="flex space-x-2">
