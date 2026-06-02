@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from './AuthContext';
 import { API } from '../lib/api';
@@ -12,7 +12,7 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState({ items: [] });
   const [loading, setLoading] = useState(false);
 
-  const fetchCart = async () => {
+  const fetchCart = useCallback(async () => {
     if (!token || !user || user.role !== 'customer') return;
     try {
       setLoading(true);
@@ -25,11 +25,11 @@ export const CartProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, user]);
 
   useEffect(() => {
     fetchCart();
-  }, [token, user]);
+  }, [fetchCart]);
 
   const addToCart = async (productId, quantity = 1) => {
     try {

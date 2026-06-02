@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -19,19 +19,7 @@ export const SellerShops = () => {
   const [savingEdit, setSavingEdit] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  useEffect(() => {
-    fetchShops();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const fetchShops = async () => {
+  const fetchShops = useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`${API}/seller/shops`, { headers: { Authorization: `Bearer ${token}` } });
@@ -41,7 +29,19 @@ export const SellerShops = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchShops();
+  }, [fetchShops]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleImage = async (e) => {
     const file = e.target.files[0];

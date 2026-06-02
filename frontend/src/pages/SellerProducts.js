@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
@@ -29,20 +29,7 @@ export const SellerProducts = () => {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
 
-  useEffect(() => {
-    fetchProducts();
-    fetchShops();
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/seller/products`, {
@@ -54,16 +41,29 @@ export const SellerProducts = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
-  const fetchShops = async () => {
+  const fetchShops = useCallback(async () => {
     try {
       const res = await axios.get(`${API}/seller/shops`, { headers: { Authorization: `Bearer ${token}` } });
       setShops(res.data);
     } catch (err) {
       console.error('Error fetching shops', err);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchProducts();
+    fetchShops();
+  }, [fetchProducts, fetchShops]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ProductCard } from '../components/ProductCard';
@@ -16,16 +16,7 @@ export const Shop = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchShop();
-  }, [id]);
-
-  useEffect(() => {
-    if (selectedCategory === 'all') setFiltered(products);
-    else setFiltered(products.filter(p => p.category === selectedCategory));
-  }, [products, selectedCategory]);
-
-  const fetchShop = async () => {
+  const fetchShop = useCallback(async () => {
     try {
       setLoading(true);
       const [sRes, pRes, cRes] = await Promise.all([
@@ -45,7 +36,11 @@ export const Shop = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchShop();
+  }, [fetchShop]);
 
   if (loading) {
     return (
