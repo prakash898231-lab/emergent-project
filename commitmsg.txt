@@ -1,0 +1,1 @@
+Update email-validator to 2.3.0
