@@ -5,3 +5,9 @@ services:
     root: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+  - type: static
+    name: emergent-project-frontend
+    env: node
+    root: frontend
+    buildCommand: npm install && npm run build
+    publishPath: build
